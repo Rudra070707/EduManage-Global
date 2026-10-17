@@ -1,0 +1,23 @@
+
+# Database credentials
+db.properties
+
+# Compiled Java files
+*.class
+out/
+bin/
+
+# Local JDBC libraries
+lib/*.jar
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Logs and temporary files
+*.log
+*.tmp

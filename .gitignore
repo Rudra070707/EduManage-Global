@@ -1,0 +1,32 @@
+﻿# Secrets and environment configuration
+.env
+.env.*
+!.env.example
+db.properties
+wd/.env
+fsjp/db.properties
+
+# Dependencies and generated files
+**/node_modules/
+*.log
+*.class
+fsjp/out/
+fsjp/bin/
+
+# IDE and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local libraries
+fsjp/lib/*.jar
+
+# Test and coverage output
+coverage/
+
+# Private database backup
+student_management_backup_*.sql
+
+# Temporary source backups
+*.before-*

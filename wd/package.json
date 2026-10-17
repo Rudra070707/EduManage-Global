@@ -1,0 +1,22 @@
+{
+  "name": "student-management-wd",
+  "version": "1.0.0",
+  "description": "Student Management System - Web Designing Module",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "mysql2": "^3.11.0"
+  },
+  "overrides": {
+    "express-mysql-session": {
+      "mysql2": "3.24.6"
+    }
+  }
+}
