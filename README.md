@@ -1,4 +1,5 @@
- <div align="center">
+
+<div align="center">
 
 # EduManage Global
 
@@ -25,24 +26,52 @@ EduManage Global is a student information and academic records platform designed
 
 The platform combines two applications:
 
-- **Web application (WD):** A browser-based interface for student records, academic marks, dashboards and role-based access.
+- **Web application (WD):** A browser-based interface for student records, academic marks, dashboards, and role-based access.
 - **Java application (FSJP):** A menu-driven console application built with Java and JDBC for student and marks management.
 
 Both applications connect to the same MySQL database. Changes made through one application can be viewed through the other when they access the same records.
 
 > **Project status:** Active development. This is an educational software project and is not yet production-ready.
 
+## Product screenshots
+
+Explore the actual EduManage Global interfaces.
+
+### 1. Admin dashboard
+
+An overview of student records and academic management.
+
+![EduManage Global admin dashboard](assets/screenshots/admin-dashboard.png)
+
+### 2. Student directory
+
+Browse and manage student records through the web interface.
+
+![EduManage Global student directory](assets/screenshots/student-directory.png)
+
+### 3. Academic marks
+
+View student marks, subject scores, totals, percentages, and grades.
+
+![EduManage Global academic marks](assets/screenshots/academic-marks.png)
+
+### 4. Java console application
+
+The Java/JDBC application connects to the same MySQL database as the web application.
+
+![EduManage Global Java console](assets/screenshots/java-console.png)
+
 ## Product capabilities
 
 | Area | Capabilities |
 |---|---|
-| Identity and access | Administrator and student accounts, server-side sessions and role-based permissions |
-| Student administration | Student enrolment, directory, search, filtering, profile updates and record management |
-| Academic records | Five-subject scorecards, totals, percentages and letter grades |
-| Student experience | Personal dashboard, profile details and academic results |
-| Java application | JDBC connectivity, DAO-based database access, student operations and marks management |
+| Identity and access | Administrator and student accounts, server-side sessions, and role-based permissions |
+| Student administration | Student enrolment, directory, search, filtering, profile updates, and record management |
+| Academic records | Five-subject scorecards, totals, percentages, and letter grades |
+| Student experience | Personal dashboard, profile details, and academic results |
+| Java application | JDBC connectivity, DAO-based database access, student operations, and marks management |
 | Shared database | Both applications use the `student_management` MySQL database |
-| Automated testing | Jest and Supertest tests for application responses, authorization and marks validation |
+| Automated testing | Jest and Supertest tests for application responses, authorization, and marks validation |
 
 ## System architecture
 
@@ -68,15 +97,23 @@ flowchart TB
     JDBC <--> DB
 ```
 
+### Key architectural characteristics
+
+- **Shared data:** Both applications access the same MySQL database, allowing changes to shared records to be reflected across the applications.
+- **Separation of concerns:** The web application uses an Express backend, while the Java application separates database operations through DAO classes.
+- **Database-generated values:** The marks table uses generated columns for calculated academic values where defined in the database schema.
+- **Relational integrity:** Database constraints help maintain relationships between student records and associated academic records.
+
 ## Technology stack
 
 ### Web application
 
-- HTML5, CSS3 and vanilla JavaScript
+- HTML5, CSS3, and vanilla JavaScript
 - Node.js and Express.js
-- MySQL database access through `mysql2`
+- MySQL access through `mysql2`
 - `express-session` with a MySQL-backed session store
 - `bcrypt` for password hashing
+- Jest and Supertest for automated testing
 
 ### Java application
 
@@ -89,7 +126,7 @@ flowchart TB
 ### Database
 
 - MySQL Server 8.4
-- Relational tables for users, students and marks
+- Relational tables for users, students, marks, and sessions
 - Generated total and percentage fields for academic scores
 
 ## Verification and testing
@@ -104,15 +141,23 @@ The following checks have been completed in the current development environment:
 | Marks records accessed through both applications | Verified |
 | Java marks update reflected in the web application | Verified |
 | Node.js automated tests | 47 passed across 4 suites |
+| Web backend MySQL connection | Verified |
+| MySQL session store initialization | Verified |
 
-The automated tests cover application responses, authentication requirements, role-based access and marks validation.
+The automated tests cover application responses, authentication requirements, role-based access, and marks validation.
 
-These results describe the tested development environment. They do not imply production certification, exhaustive test coverage or a complete security audit.
+These results describe the tested development environment. They do not imply production certification, exhaustive test coverage, or a complete security audit.
 
 ## Repository structure
 
 ```text
 EduManage-Global/
+├── assets/
+│   └── screenshots/
+│       ├── admin-dashboard.png
+│       ├── student-directory.png
+│       ├── academic-marks.png
+│       └── java-console.png
 ├── database/
 │   ├── schema.sql
 │   └── sample-data.sql
@@ -146,7 +191,7 @@ EduManage-Global/
 
 ### 1. Clone the repository
 
-```bash
+```powershell
 git clone https://github.com/Rudra070707/EduManage-Global.git
 cd EduManage-Global
 ```
@@ -157,7 +202,7 @@ Start MySQL and ensure that the `student_management` database and required table
 
 The schema definition is available in [`database/schema.sql`](database/schema.sql).
 
-Review [`database/sample-data.sql`](database/sample-data.sql) before running it. It is intended for a fresh demonstration database and must not be run blindly against an existing working database.
+Review [`database/sample-data.sql`](database/sample-data.sql) before running it. It is intended for a demonstration database and must not be run blindly against an existing working database.
 
 For detailed instructions, see the [setup guide](docs/setup-guide.md).
 
@@ -172,7 +217,7 @@ npm.cmd install
 
 Create a local `.env` file using `.env.example` as a reference. Configure the required database settings and a strong session secret using the variable names expected by the backend.
 
-Do not commit `.env` or share its contents.
+Keep `.env` private. Never commit database passwords or session secrets.
 
 Start the development server:
 
@@ -194,7 +239,7 @@ cd fsjp
 
 Configure `db.properties` using `db.properties.example` as a reference. Enter the credentials for your local database account. Do not commit the real properties file.
 
-Ensure the MySQL Connector/J JAR exists at the configured library path, then compile the Java sources:
+Ensure the MySQL Connector/J JAR exists at the expected library path, then compile the Java sources:
 
 ```powershell
 javac -cp ".\lib\mysql-connector-j.jar" -d .\out .\src\main\java\com\studentmgmt\*.java
@@ -225,10 +270,10 @@ EduManage Global is currently intended for local development and academic demons
 Before deploying it to a public environment:
 
 - Replace demonstration credentials and use strong, unique passwords.
-- Keep `.env`, `db.properties`, database backups and other secrets out of Git.
+- Keep `.env`, `db.properties`, database backups, and other secrets out of Git.
 - Use a dedicated database account with least-privilege permissions.
 - Configure HTTPS and production cookie settings.
-- Review session management, login rate limiting, CSRF protection and authorization.
+- Review session management, login rate limiting, CSRF protection, and authorization.
 - Verify that students can access only their own records.
 - Test database backup restoration and application recovery.
 - Review dependency vulnerabilities and deployment configuration.
@@ -242,6 +287,7 @@ Refer to the setup documentation and source code for implementation details and 
 - [x] Student and marks management workflows
 - [x] Role-based access controls
 - [x] Automated backend test suites
+- [x] Product screenshots and repository documentation
 - [ ] Expand end-to-end and cross-application integration tests
 - [ ] Add continuous integration for automated test execution
 - [ ] Improve deployment documentation and operational monitoring
@@ -257,7 +303,7 @@ Refer to the setup documentation and source code for implementation details and 
 
 ## Contributing
 
-Bug reports, improvement suggestions and contributions are welcome.
+Bug reports, improvement suggestions, and contributions are welcome.
 
 1. Fork the repository.
 2. Create a focused branch for your change.
