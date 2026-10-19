@@ -1844,3 +1844,284 @@ document.addEventListener('DOMContentLoaded', () => {
   // 8. Bootstrap Session Verification
   checkAuth();
 });
+
+
+// ============================================================================
+// EDUMANAGE GLOBAL — FRONT-END EXPERIENCE & ACCESSIBILITY ENHANCEMENTS
+// ----------------------------------------------------------------------------
+// Additive UI layer only. This section intentionally does not replace or alter
+// authentication, API endpoints, CRUD handlers, grade rules, data calculations,
+// or role permissions defined above. It progressively enhances the existing UI.
+// ============================================================================
+
+(() => {
+  'use strict';
+
+  const UX = {
+    initialized: false,
+    lastFocusedElement: null,
+    observer: null,
+    reducedMotion: false
+  };
+
+  const byId = (id) => document.getElementById(id);
+  const all = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+  /** Safely add semantic affordances without replacing existing handlers. */
+  function enhanceSemantics() {
+    document.documentElement.classList.add('edumanage-js-ready');
+    document.body.classList.add('edumanage-experience-enhanced');
+    UX.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const main = byId('main-content');
+    if (main && !main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
+    if (main && !main.hasAttribute('aria-label')) main.setAttribute('aria-label', 'Main application content');
+
+    const nav = document.querySelector('.sidebar-nav');
+    if (nav && !nav.hasAttribute('aria-label')) nav.setAttribute('aria-label', 'Main navigation');
+
+    all('.sidebar-nav .nav-item').forEach((item) => {
+      if (!item.hasAttribute('aria-current') && item.classList.contains('active')) {
+        item.setAttribute('aria-current', 'page');
+      }
+      item.addEventListener('click', () => {
+        all('.sidebar-nav .nav-item').forEach((link) => {
+          link.removeAttribute('aria-current');
+        });
+        item.setAttribute('aria-current', 'page');
+      });
+    });
+
+    const sidebar = byId('sidebar');
+    const mobileToggle = byId('mobile-toggle-btn');
+    if (mobileToggle) {
+      mobileToggle.setAttribute('aria-controls', 'sidebar');
+      mobileToggle.setAttribute('aria-expanded', String(Boolean(sidebar && sidebar.classList.contains('open'))));
+    }
+
+    const password = byId('login-password');
+    const passwordToggle = byId('password-toggle');
+    if (password && passwordToggle) {
+      passwordToggle.setAttribute('aria-controls', password.id);
+      if (!passwordToggle.hasAttribute('aria-label')) passwordToggle.setAttribute('aria-label', 'Show or hide password');
+    }
+
+    const loading = byId('loading-overlay');
+    if (loading) {
+      loading.setAttribute('role', 'status');
+      loading.setAttribute('aria-live', 'polite');
+    }
+
+    const toastContainer = byId('toast-container');
+    if (toastContainer) {
+      toastContainer.setAttribute('role', 'region');
+      toastContainer.setAttribute('aria-label', 'Notifications');
+      toastContainer.setAttribute('aria-live', 'polite');
+      toastContainer.setAttribute('aria-relevant', 'additions text');
+    }
+
+    const modal = byId('confirm-modal');
+    if (modal) {
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('role', 'dialog');
+    }
+
+    all('button:not([type])').forEach((button) => button.setAttribute('type', 'button'));
+    all('input, select, textarea').forEach((field) => {
+      if (field.disabled) field.setAttribute('aria-disabled', 'true');
+      if (field.required && !field.hasAttribute('aria-required')) field.setAttribute('aria-required', 'true');
+    });
+  }
+
+  /** Apply interaction states to dynamically-created controls too. */
+  function enhanceDynamicContent(root = document) {
+    all('.content-card, .stat-card, .filter-card, .dashboard-hero', root).forEach((card) => {
+      if (!card.hasAttribute('data-ux-enhanced')) card.setAttribute('data-ux-enhanced', 'true');
+    });
+
+    all('.stat-card', root).forEach((card) => {
+      if (!card.hasAttribute('tabindex') && card.querySelector('a, button')) {
+        card.setAttribute('tabindex', '0');
+      }
+    });
+
+    all('table', root).forEach((table) => {
+      if (!table.hasAttribute('role')) table.setAttribute('role', 'table');
+      const wrapper = table.closest('.table-responsive');
+      if (wrapper && !wrapper.hasAttribute('tabindex')) {
+        wrapper.setAttribute('tabindex', '0');
+        wrapper.setAttribute('role', 'region');
+        const heading = table.id === 'marks-table'
+          ? 'Academic marks table'
+          : table.id === 'students-table'
+            ? 'Student records table'
+            : 'Data table';
+        wrapper.setAttribute('aria-label', heading + '. Scroll horizontally to view all columns.');
+      }
+    });
+
+    all('.action-btn, .btn, .chip', root).forEach((button) => {
+      if (!button.hasAttribute('data-ux-boundary')) button.setAttribute('data-ux-boundary', 'true');
+    });
+  }
+
+  /** Small visual polish through existing classes and safe inline properties. */
+  function enhanceInteractionFeedback() {
+    document.addEventListener('pointerdown', (event) => {
+      const target = event.target.closest('.btn, .action-btn, .chip, .nav-item');
+      if (!target || target.disabled || UX.reducedMotion) return;
+      target.classList.add('ux-pressed');
+      window.setTimeout(() => target.classList.remove('ux-pressed'), 160);
+    }, { passive: true });
+
+    document.addEventListener('focusin', (event) => {
+      const field = event.target;
+      if (!field.matches('input, select, textarea')) return;
+      const group = field.closest('.form-group');
+      if (group) group.classList.add('ux-field-active');
+    });
+
+    document.addEventListener('focusout', (event) => {
+      const field = event.target;
+      if (!field.matches('input, select, textarea')) return;
+      const group = field.closest('.form-group');
+      if (group) group.classList.remove('ux-field-active');
+    });
+  }
+
+  /** Keep current navigation semantics synchronized with SPA route changes. */
+  function syncNavigationState() {
+    const observerTarget = byId('app-section') || document.body;
+    if (UX.observer) UX.observer.disconnect();
+    UX.observer = new MutationObserver(() => {
+      const sidebar = byId('sidebar');
+      const toggle = byId('mobile-toggle-btn');
+      if (sidebar && toggle) {
+        toggle.setAttribute('aria-expanded', String(sidebar.classList.contains('open')));
+      }
+      const active = document.querySelector('.sidebar-nav .nav-item.active');
+      all('.sidebar-nav .nav-item').forEach((item) => {
+        if (item === active) item.setAttribute('aria-current', 'page');
+        else item.removeAttribute('aria-current');
+      });
+      enhanceDynamicContent(document);
+    });
+    UX.observer.observe(observerTarget, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['class', 'style']
+    });
+  }
+
+  /** Keyboard conveniences; existing buttons and application handlers remain authoritative. */
+  function bindKeyboardExperience() {
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        const sidebar = byId('sidebar');
+        if (sidebar && sidebar.classList.contains('open')) {
+          if (typeof closeMobileSidebar === 'function') closeMobileSidebar();
+        }
+
+        const modal = byId('confirm-modal');
+        if (modal && !modal.classList.contains('hidden')) {
+          const cancel = byId('modal-cancel-btn');
+          if (cancel) cancel.click();
+        }
+      }
+
+      // Ctrl/Cmd + K focuses the student search when that view is available.
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        const search = byId('filter-search');
+        const studentsView = byId('students-view');
+        if (search && studentsView && !studentsView.classList.contains('hidden')) {
+          event.preventDefault();
+          search.focus();
+          search.select();
+        }
+      }
+    });
+
+    const modal = byId('confirm-modal');
+    if (!modal) return;
+    const observer = new MutationObserver(() => {
+      const isOpen = !modal.classList.contains('hidden');
+      if (isOpen) {
+        if (!modal.dataset.uxOpen) {
+          UX.lastFocusedElement = document.activeElement;
+          modal.dataset.uxOpen = 'true';
+          const preferred = byId('modal-cancel-btn') || byId('modal-confirm-btn') || byId('modal-close-btn');
+          if (preferred) preferred.focus({ preventScroll: true });
+        }
+      } else if (modal.dataset.uxOpen) {
+        delete modal.dataset.uxOpen;
+        if (UX.lastFocusedElement && typeof UX.lastFocusedElement.focus === 'function') {
+          UX.lastFocusedElement.focus({ preventScroll: true });
+        }
+      }
+    });
+    observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  /** Enhance the five-subject preview without changing its calculations. */
+  function enhanceMarksPreview() {
+    const preview = document.querySelector('.marks-calc-preview');
+    if (!preview) return;
+    preview.setAttribute('aria-label', 'Live marks calculation preview');
+    preview.setAttribute('aria-live', 'polite');
+    preview.setAttribute('aria-atomic', 'true');
+
+    ['marks-sub1', 'marks-sub2', 'marks-sub3', 'marks-sub4', 'marks-sub5'].forEach((id, index) => {
+      const field = byId(id);
+      if (!field) return;
+      field.setAttribute('inputmode', 'numeric');
+      field.setAttribute('aria-describedby', field.getAttribute('aria-describedby') || 'marks-entry-guidance');
+      if (!byId('marks-entry-guidance')) {
+        const guidance = document.createElement('span');
+        guidance.id = 'marks-entry-guidance';
+        guidance.className = 'visually-hidden';
+        guidance.textContent = 'Enter a score from 0 to 100 for each subject.';
+        field.insertAdjacentElement('afterend', guidance);
+      }
+      field.dataset.subjectNumber = String(index + 1);
+    });
+  }
+
+  /** Keep feedback unobtrusive and make the page's state discoverable. */
+  function enhanceStatusAndForms() {
+    const loginForm = byId('login-form');
+    if (loginForm) loginForm.setAttribute('aria-label', 'Sign in to EduManage Global');
+    const studentForm = byId('student-form');
+    if (studentForm) studentForm.setAttribute('aria-label', 'Student enrollment details');
+    const marksForm = byId('marks-form');
+    if (marksForm) marksForm.setAttribute('aria-label', 'Academic marks entry');
+
+    const headings = all('.view-panel h2');
+    headings.forEach((heading) => {
+      if (!heading.id) heading.id = `view-heading-${Math.random().toString(36).slice(2, 9)}`;
+      const panel = heading.closest('.view-panel');
+      if (panel && !panel.hasAttribute('aria-labelledby')) panel.setAttribute('aria-labelledby', heading.id);
+    });
+
+    const yearSelect = byId('student-year');
+    if (yearSelect && !yearSelect.getAttribute('autocomplete')) yearSelect.setAttribute('autocomplete', 'off');
+  }
+
+  function initializeExperienceLayer() {
+    if (UX.initialized) return;
+    UX.initialized = true;
+    enhanceSemantics();
+    enhanceDynamicContent(document);
+    enhanceInteractionFeedback();
+    syncNavigationState();
+    bindKeyboardExperience();
+    enhanceMarksPreview();
+    enhanceStatusAndForms();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeExperienceLayer, { once: true });
+  } else {
+    initializeExperienceLayer();
+  }
+})();
