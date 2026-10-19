@@ -3,7 +3,7 @@
  * db.js - EduManage Database Connection Pool
  *
  * Development:
- *   Uses the existing .env configuration, with local-only defaults.
+ *   Uses the existing .env configuration with local-only defaults.
  *
  * Production:
  *   Requires explicit database configuration and rejects unsafe defaults.
@@ -12,6 +12,7 @@
  *   - Never logs database passwords.
  *   - Validates configuration before creating the pool.
  *   - Uses a reusable mysql2/promise connection pool.
+ *   - Exposes an initial connection check for startup verification.
  */
 
 require('dotenv').config();
@@ -29,14 +30,14 @@ function getDatabaseConfig() {
     ];
 
     if (isProduction) {
-        const missingVariables = requiredVariables.filter(
-            name => !process.env[name] ||
-                process.env[name].trim() === ''
-        );
+        const missingVariables = requiredVariables.filter(name => {
+            const value = process.env[name];
+            return !value || value.trim() === '';
+        });
 
         if (missingVariables.length > 0) {
             throw new Error(
-                `Production database configuration is incomplete. ` +
+                'Production database configuration is incomplete. ' +
                 `Set the following environment variables: ${missingVariables.join(', ')}.`
             );
         }
@@ -105,33 +106,42 @@ const databaseConfig = getDatabaseConfig();
 
 const pool = mysql.createPool(databaseConfig);
 
-// Check connectivity without blocking module loading.
-// Database-dependent operations will still report errors if MySQL is unavailable.
+/**
+ * Test the database connection.
+ *
+ * This check does not print credentials or the full connection
+ * configuration. The pool remains available to the application.
+ */
 const connectionCheck = (async () => {
     let connection;
 
     try {
         connection = await pool.getConnection();
 
-        // Confirm that the connection can execute a simple query.
         await connection.query('SELECT 1');
 
         console.log(
             `Connected to MySQL database successfully (${databaseConfig.database}).`
         );
+
+        return true;
     } catch (error) {
-        // Log a generic message rather than credentials or connection details.
         console.error(
             'Failed to connect to MySQL database. ' +
-            'Check the MySQL service, network, and database configuration.'
+            'Check the MySQL service and database configuration.'
         );
 
-        console.error('Database error code:', error.code || 'UNKNOWN');
+        // Print only the error code, not credentials or connection details.
+        console.error(
+            'Database error code:',
+            error.code || 'UNKNOWN'
+        );
 
-        // Keep startup diagnostics available to the application.
         if (isProduction) {
             throw error;
         }
+
+        return false;
     } finally {
         if (connection) {
             connection.release();
@@ -139,8 +149,5 @@ const connectionCheck = (async () => {
     }
 })();
 
-// Allow other modules to use the same connection pool.
 module.exports = pool;
-
-// Expose the initial connection check for optional startup verification.
 module.exports.connectionCheck = connectionCheck;

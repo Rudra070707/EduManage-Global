@@ -21,6 +21,7 @@ class MySQLSessionStore extends session.Store {
         this.cleanupInterval =
             options.cleanupInterval ?? 15 * 60 * 1000;
 
+        // Validate the table name before using it in SQL.
         if (!/^[a-zA-Z0-9_]+$/.test(this.tableName)) {
             throw new Error('Invalid session table name.');
         }
@@ -32,10 +33,10 @@ class MySQLSessionStore extends session.Store {
             throw new Error('Invalid session cleanup interval.');
         }
 
-        // Verify that the existing session table is accessible.
-        // No CREATE privilege is required.
+        // Start initialization once. Other operations wait for this promise.
         this.ready = this.initialize();
 
+        // Periodically remove expired sessions.
         this.cleanupTimer = setInterval(() => {
             this.cleanup().catch(error => {
                 console.error(
@@ -45,22 +46,25 @@ class MySQLSessionStore extends session.Store {
             });
         }, this.cleanupInterval);
 
-        // Do not keep Node.js running solely for this timer.
+        // Prevent the timer alone from keeping Node.js running.
         this.cleanupTimer.unref();
     }
 
+    /**
+     * Verify that the existing sessions table is accessible,
+     * then remove expired sessions.
+     *
+     * Requires SELECT and DELETE permissions.
+     * Does not create or alter tables.
+     */
     async initialize() {
         try {
-            // Verify the table exists without creating or changing it.
             await pool.execute(
                 `SELECT session_id
                  FROM \`${this.tableName}\`
                  LIMIT 0`
             );
 
-            // Important: do not call this.cleanup() here.
-            // cleanup() awaits this.ready, which is this.initialize()
-            // promise. Doing so would cause a circular wait.
             await pool.execute(
                 `DELETE FROM \`${this.tableName}\`
                  WHERE expires <= ?`,
@@ -69,6 +73,7 @@ class MySQLSessionStore extends session.Store {
 
             console.log('MySQL session store initialized.');
         } catch (error) {
+            // Log the underlying MySQL error code for diagnosis.
             console.error(
                 'MySQL session store initialization failed:',
                 error.code || error.message
@@ -76,12 +81,15 @@ class MySQLSessionStore extends session.Store {
 
             throw new Error(
                 `Cannot initialize session store using table "${this.tableName}". ` +
-                'Verify that the table exists and the database account has ' +
+                'Verify the database connection, table existence, and ' +
                 'SELECT and DELETE permissions.'
             );
         }
     }
 
+    /**
+     * Retrieve a session using the Express Store callback API.
+     */
     get(sid, callback) {
         this.getSession(sid)
             .then(data => callback(null, data))
@@ -111,6 +119,9 @@ class MySQLSessionStore extends session.Store {
         return JSON.parse(rows[0].data);
     }
 
+    /**
+     * Save or update a session.
+     */
     set(sid, sessionData, callback = () => {}) {
         this.saveSession(sid, sessionData)
             .then(() => callback(null))
@@ -139,6 +150,9 @@ class MySQLSessionStore extends session.Store {
         );
     }
 
+    /**
+     * Update the expiration time without rewriting session data.
+     */
     touch(sid, sessionData, callback = () => {}) {
         this.touchSession(sid, sessionData)
             .then(() => callback(null))
@@ -164,6 +178,9 @@ class MySQLSessionStore extends session.Store {
         );
     }
 
+    /**
+     * Destroy a session using the Express Store callback API.
+     */
     destroy(sid, callback = () => {}) {
         this.destroySession(sid)
             .then(() => callback(null))
@@ -180,8 +197,11 @@ class MySQLSessionStore extends session.Store {
         );
     }
 
+    /**
+     * Remove expired sessions.
+     */
     async cleanup() {
-        // Safe for periodic calls after initialization.
+        // Wait for initialization before running cleanup.
         await this.ready;
 
         await pool.execute(
@@ -191,8 +211,14 @@ class MySQLSessionStore extends session.Store {
         );
     }
 
+    /**
+     * Stop the periodic cleanup timer.
+     */
     close() {
-        clearInterval(this.cleanupTimer);
+        if (this.cleanupTimer) {
+            clearInterval(this.cleanupTimer);
+            this.cleanupTimer = null;
+        }
     }
 }
 
