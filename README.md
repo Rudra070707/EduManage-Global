@@ -1,5 +1,4 @@
-
-<div align="center">
+ <div align="center">
 
 # EduManage Global
 
@@ -9,6 +8,7 @@ A unified student management system connecting a web application and a Java cons
 
 [Explore Repository](https://github.com/Rudra070707/EduManage-Global) · [Report an Issue](https://github.com/Rudra070707/EduManage-Global/issues)
 
+![CI](https://github.com/Rudra070707/EduManage-Global/actions/workflows/tests.yml/badge.svg)
 ![Java](https://img.shields.io/badge/Java-21-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-24-339933?style=flat-square&logo=nodedotjs&logoColor=white)
 ![Express](https://img.shields.io/badge/Express.js-Backend-000000?style=flat-square&logo=express&logoColor=white)
@@ -72,6 +72,7 @@ The Java/JDBC application connects to the same MySQL database as the web applica
 | Java application | JDBC connectivity, DAO-based database access, student operations, and marks management |
 | Shared database | Both applications use the `student_management` MySQL database |
 | Automated testing | Jest and Supertest tests for application responses, authorization, and marks validation |
+| Continuous integration | GitHub Actions automatically runs the Node.js test suite on pushes and pull requests targeting `main` |
 
 ## System architecture
 
@@ -131,7 +132,7 @@ flowchart TB
 
 ## Verification and testing
 
-The following checks have been completed in the current development environment:
+The following checks have been completed in the development environment:
 
 | Verification | Result |
 |---|---|
@@ -143,6 +144,7 @@ The following checks have been completed in the current development environment:
 | Node.js automated tests | 47 passed across 4 suites |
 | Web backend MySQL connection | Verified |
 | MySQL session store initialization | Verified |
+| GitHub Actions CI workflow | Passed |
 
 The automated tests cover application responses, authentication requirements, role-based access, and marks validation.
 
@@ -152,6 +154,9 @@ These results describe the tested development environment. They do not imply pro
 
 ```text
 EduManage-Global/
+├── .github/
+│   └── workflows/
+│       └── tests.yml
 ├── assets/
 │   └── screenshots/
 │       ├── admin-dashboard.png
@@ -208,14 +213,14 @@ For detailed instructions, see the [setup guide](docs/setup-guide.md).
 
 ### 3. Configure and start the web application
 
-Open PowerShell from the project root:
+From the project root, open PowerShell and run:
 
 ```powershell
 cd wd
-npm.cmd install
+npm.cmd ci
 ```
 
-Create a local `.env` file using `.env.example` as a reference. Configure the required database settings and a strong session secret using the variable names expected by the backend.
+Create a local `.env` file using `.env.example` as a reference. Configure the database settings and a strong session secret using the variable names expected by the backend.
 
 Keep `.env` private. Never commit database passwords or session secrets.
 
@@ -263,6 +268,14 @@ npm.cmd test
 
 The test suite uses Jest and Supertest.
 
+### 6. Continuous integration
+
+The GitHub Actions workflow is located at `.github/workflows/tests.yml`.
+
+It runs automatically when code is pushed to `main` or when a pull request targets `main`. The workflow installs dependencies with `npm ci` and runs `npm test` in the `wd` directory.
+
+View the latest workflow runs on the [GitHub Actions page](https://github.com/Rudra070707/EduManage-Global/actions).
+
 ## Security and deployment status
 
 EduManage Global is currently intended for local development and academic demonstration.
@@ -288,8 +301,8 @@ Refer to the setup documentation and source code for implementation details and 
 - [x] Role-based access controls
 - [x] Automated backend test suites
 - [x] Product screenshots and repository documentation
+- [x] GitHub Actions CI workflow
 - [ ] Expand end-to-end and cross-application integration tests
-- [ ] Add continuous integration for automated test execution
 - [ ] Improve deployment documentation and operational monitoring
 - [ ] Complete a production-focused security review
 
